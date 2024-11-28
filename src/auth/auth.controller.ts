@@ -7,17 +7,20 @@ import {
   Patch,
   Post,
   Req,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { UserService } from '../user/user.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly userService: UserService,
+  ) {}
 
   @Post()
   create(@Body() createAuthDto: CreateAuthDto) {
@@ -33,10 +36,22 @@ export class AuthController {
   @UseGuards(AuthGuard('naver'))
   async naverAuthCallback(
     @Req() req,
-    @Res() res: Response, // : Promise<NaverLoginAuthOutputDto>
+    // @Res() res: Response, // : Promise<NaverLoginAuthOutputDto>
   ) {
     const { user } = req;
-    console.log(user);
+    const existUser = await this.userService.findOne({
+      email: user.email,
+      nickname: user.nickname,
+      photo: user.photo,
+    });
+    if (!existUser) {
+      await this.userService.create({
+        email: user.email,
+        name: user.nickname,
+        photo: user.photo,
+        type: 'naver',
+      });
+    }
     return { user };
   }
 
